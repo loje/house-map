@@ -14,8 +14,8 @@
         </el-form-item>
         <el-form-item label="关键字：">
           <el-tag
-            :key="tag"
-            v-for="tag in form.keyword"
+            :key="$index"
+            v-for="(tag, $index) in form.keyword"
             closable
             :disable-transitions="false"
             @close="handleClose(tag)"
@@ -61,7 +61,8 @@
       <el-table-column prop="title" label="标题" width="250"></el-table-column>
       <el-table-column prop="price" label="租金">
         <template slot-scope="scope">
-          <span v-if="scope.row.price === -1">未知租金</span>
+          <span v-if="scope.row.price === -1" style="color:#ccc;">未知租金</span>
+          <span v-else>￥{{scope.row.price}}</span>
         </template>
       </el-table-column>
       <el-table-column prop="location" label="地点" width="250"></el-table-column>
@@ -82,7 +83,7 @@
       </el-table-column>
       <el-table-column prop="tags" label="关键字" width="160">
         <template slot-scope="scope">
-          <el-tag v-for="item in scope.row.tagsList" :key="item">{{item}}</el-tag>
+          <el-tag v-for="(item, $index) in scope.row.tagsList" :key="$index" :style="{marginRight: '5px'}">{{item}}</el-tag>
         </template>
       </el-table-column>
       <el-table-column label="链接">
@@ -90,20 +91,23 @@
           <a :href="scope.row.onlineURL" target="blank">打开链接</a>
         </template>
       </el-table-column>
-      <el-table-column label="图集" width="300">
+      <el-table-column label="图集" width="120">
         <template slot-scope="scope">
-          <el-image
-            :src="item"
-            v-for="(item, $index) in scope.row.pictures"
-            :key="$index"
-            :style="{width: '100px'}"
-            :preview-src-list="scope.row.pictures"
-            lazy
-          >
-            <div slot="error" class="image-slot">
-              <i class="el-icon-picture-outline"></i> {{item.replace(new RegExp('webp','g'), 'jpg')}}
-            </div>
-          </el-image>
+          <el-popover
+            placement="right"
+            trigger="hover"
+            maxWidth="500"
+            >
+            <template v-for="(item, $index) in scope.row.pictures">
+              <el-image
+                :src="item.replace(new RegExp('webp','g'), 'jpg')"
+                :preview-src-list="scope.row.pictures"
+                :style="{width: '100px'}"
+                :key="$index"></el-image>
+            </template>
+            <el-button slot="reference">查看图集</el-button>
+          </el-popover>
+          <!-- <el-button @click="priview(scope.row)">查看图集</el-button> -->
         </template>
       </el-table-column>
     </el-table>
@@ -116,6 +120,16 @@
       @current-change="handleCurrentChange"
       @size-change="handleSizeChange"
     ></el-pagination>
+
+    <el-dialog :title="dialogTitle" :visible.sync="dialogFormVisible" @close="closeDialog">
+      <template v-for="(item, $index) in pictures">
+        <el-image
+          :src="`${item.replace(new RegExp('webp','g'), 'jpg')}`"
+          :preview-src-list="pictures"
+          :style="{width: '200px'}"
+          :key="$index"></el-image>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
@@ -162,6 +176,10 @@ export default {
       },
       inputVisible: false,
       inputValue: '',
+
+      dialogTitle: '',
+      pictures: [],
+      dialogFormVisible: false,
     };
   },
   mounted() {
@@ -169,23 +187,31 @@ export default {
   },
   methods: {
     getData(form) {
-      console.log(form);
       this.loading = true;
       api.houses({
         ...form,
-        keyword: form.keyword && form.keyword.length > 0 ? form.keyword : undefined,
+        keyword: form.keyword && form.keyword.length > 0 ? form.keyword.toString() : undefined,
         rentType: form.rentType ? form.rentType : undefined,
       }).then(res => {
         this.loading = false;
         if (res.data.success && res.data.success === true) {
           const data = res.data.data;
-          for (let i = 0; i < data.length; i += 1) {
-            data[i].num = i + 1;
-            if (data[i].tags != null) {
-              data[i].tagsList = data[i].tags.split("|");
+          if (res.data.data) {
+            for (let i = 0; i < data.length; i += 1) {
+              data[i].num = i + 1;
+              data[i].tagsList = [];
+              if (data[i].tags !== null && data[i].tags !== '|') {
+                data[i].tagsList = data[i].tags.split("|");
+              }
+
+              if (data[i].title.indexOf('一室一厅') != -1 || data[i].title.indexOf('一房一厅') != -1) {
+                data[i].tagsList.push('一房一厅');
+              }
             }
           }
-          this.tableData = data;
+          
+          this.tableData = data ? data : [];
+          this.currentPage = 1;
           this.total = data.length;
         }
       });
@@ -217,6 +243,16 @@ export default {
       }
       this.inputVisible = false;
       this.inputValue = '';
+    },
+    priview(row) {
+      this.dialogTitle = row.title;
+      this.pictures = row.pictures;
+      this.dialogFormVisible = true;
+    },
+    closeDialog() {
+      this.dialogTitle = ''
+      this.pictures = [];
+      this.dialogFormVisible = false;
     },
   },
 };
