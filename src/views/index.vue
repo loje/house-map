@@ -58,7 +58,17 @@
           <span v-if="scope.row.rentType === 4">公寓</span>
         </template>
       </el-table-column>
-      <el-table-column prop="title" label="标题" width="250"></el-table-column>
+      <el-table-column prop="title" label="标题" width="250">
+        <template slot-scope="scope">
+          <div v-if="scope.row.title.indexOf('求租') !== -1" style="color:#ccc;">{{scope.row.title}}</div>
+          <div v-else-if="scope.row.title.indexOf('公寓') !== -1" style="color:#ccc;">{{scope.row.title}}</div>
+          <div v-else-if="scope.row.title.indexOf('店') !== -1" style="color:#ccc;">{{scope.row.title}}</div>
+          <div v-else-if="scope.row.title.indexOf('一厅') !== -1" style="font-weight: bold;">{{scope.row.title}}</div>
+          <div v-else-if="scope.row.title.indexOf('1厅') !== -1" style="font-weight: bold;">{{scope.row.title}}</div>
+          <div v-else-if="scope.row.title.indexOf('整租') !== -1" style="font-weight: bold;">{{scope.row.title}}</div>
+          <div v-else>{{scope.row.title}}</div>
+        </template>
+      </el-table-column>
       <el-table-column prop="price" label="租金">
         <template slot-scope="scope">
           <span v-if="scope.row.price === -1" style="color:#ccc;">未知租金</span>
@@ -107,10 +117,15 @@
             </template>
             <el-button slot="reference">查看图集</el-button>
           </el-popover>
-          <!-- <el-button @click="priview(scope.row)">查看图集</el-button> -->
+        </template>
+      </el-table-column>
+      <el-table-column label="发布时间">
+        <template slot-scope="scope">
+          {{new Date(scope.row.pubTime).toLocaleDateString()}}
         </template>
       </el-table-column>
     </el-table>
+
     <el-pagination
       :current-page="currentPage"
       :page-sizes="[5, 10, 50, 100, 200]"
@@ -196,7 +211,9 @@ export default {
         this.loading = false;
         if (res.data.success && res.data.success === true) {
           const data = res.data.data;
+          const arr = [];
           if (res.data.data) {
+            
             for (let i = 0; i < data.length; i += 1) {
               data[i].num = i + 1;
               data[i].tagsList = [];
@@ -207,12 +224,29 @@ export default {
               if (data[i].title.indexOf('一室一厅') != -1 || data[i].title.indexOf('一房一厅') != -1) {
                 data[i].tagsList.push('一房一厅');
               }
+
+              if (data[i] && data[i].title.indexOf('求租') === -1 && 
+                  data[i] && data[i].title.indexOf('公寓') === -1 && 
+                  data[i] && data[i].title.indexOf('店') === -1 && 
+                  data[i] && data[i].title.indexOf('限女') === -1 && 
+                  data[i] && data[i].title.indexOf('次卧') === -1 && 
+                  data[i] && data[i].title.indexOf('主卧') === -1 && 
+                  data[i] && data[i].title.indexOf('蛋壳') === -1 && 
+                  data[i] && data[i].title.indexOf('自如') === -1 && 
+                  data[i] && data[i].title.indexOf('合租') === -1 && 
+                  data[i] && data[i].title.indexOf('管家') === -1 && 
+                  data[i] && data[i].title.indexOf('0厅') === -1 && 
+                  // data[i] && data[i].title.indexOf('办公') === -1 && 
+                  data[i] && data[i].title.indexOf('写字楼') === -1 && 
+                  data[i] && data[i].title.indexOf('室友') === -1) {
+                arr.push(data[i]);
+              }
             }
           }
           
-          this.tableData = data ? data : [];
+          this.tableData = arr ? arr : [];
           this.currentPage = 1;
-          this.total = data.length;
+          this.total = arr.length;
         }
       });
     },
